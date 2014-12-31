@@ -1,5 +1,5 @@
 
-BlackShare development tree
+BlackShares development tree
 ===========================
 
 Reimplementation of the Peershares concept (http://peershares.net/) for BlackCoin. A decentralized autonomous organization can create their own BlackCoin based blockchain and sell the tokens created during a PoW phase as shares of the organization. The organization is then able to pay dividends to the shareholders in form of (real) blackcoins.
