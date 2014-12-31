@@ -38,7 +38,7 @@ Distributing dividents among stakeholders
   ./blacksharesd distribute T X
 
 - Send coins according to distribution:
-- 
+ 
   ./blacksharesd distribute T X true
 
 
