@@ -6,6 +6,8 @@ Reimplementation of the Peershares concept (http://peershares.net/) for BlackCoi
 
 See the Peershares github for more information: https://github.com/Peershares/Peershares
 
+WARNING: This software is experimental. It is mainly considered as template for organizations to fork from in order to create their own shares that pay dividends in BlackCoin.
+
 Creating a new share
 ===========================
 
