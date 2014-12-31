@@ -6,6 +6,8 @@ Reimplementation of the Peershares concept (http://peershares.net/) for BlackCoi
 
 See the Peershares github for more information: https://github.com/Peershares/Peershares
 
+WARNING: This software is experimental. It is mainly considered as template for organizations to fork from in order to create their own shares that pay dividends in BlackCoin.
+
 Creating a new share
 ===========================
 
@@ -20,19 +22,23 @@ Synchronizing BlackCoin with a share
 
 - Start a BlackCoin client with -rpcallowip=127.0.0.1 -server=1 and the blackshares client
 - Unlock both the BlackCoin and the share wallet (not only for staking)
-- Convert share keys into BlackCoin keys and import them in the running BlackCoin wallet:
+- Convert share keys into BlackCoin keys and import them in the running BlackCoin wallet
+ 
   ./blacksharesd exportblackcoinkeys
 - The BlackCoin wallet now contains a new key for each share address
 
 
-Distributing dividents among stakeholders
+Distributing dividends among shareholders
 ===========================
 
 - Start a BlackCoin client with -rpcallowip=127.0.0.1 -server=1 and the blackshares client
 - Unlock both the BlackCoin and the share wallet (not only for staking)
 - Show the distribution of X BlackCoin over all stake holders that have a nonzero balance since time T (unix time):
+ 
   ./blacksharesd distribute T X
+
 - Send coins according to distribution:
+ 
   ./blacksharesd distribute T X true
 
 
