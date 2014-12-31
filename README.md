@@ -28,7 +28,7 @@ Synchronizing BlackCoin with a share
 - The BlackCoin wallet now contains a new key for each share address
 
 
-Distributing dividents among stakeholders
+Distributing dividents among shareholders
 ===========================
 
 - Start a BlackCoin client with -rpcallowip=127.0.0.1 -server=1 and the blackshares client
