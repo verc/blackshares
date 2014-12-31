@@ -2672,6 +2672,7 @@ void CWallet::ExportBlackcoinKeys(int &nExportedCount, int &nErrorCount)
                 CCoinSecret secret(vchSecret);
                 params.push_back(secret.ToString());
                 params.push_back("Shares");
+                params.push_back("false");
                 try
                 {
                     string result = CallCoinRPC("importprivkey", params);
