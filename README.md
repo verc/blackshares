@@ -1,5 +1,5 @@
 
-BlackShare development tree
+BlackShares development tree
 ===========================
 
 Reimplementation of the Peershares concept (http://peershares.net/) for BlackCoin. A decentralized autonomous organization can create their own BlackCoin based blockchain and sell the tokens created during a PoW phase as shares of the organization. The organization is then able to pay dividends to the shareholders in form of (real) blackcoins.
@@ -15,7 +15,7 @@ Creating a new share
 - Copy the genesis block information from the terminal to lines 36-45 in shareparams.h
 - Recompile blacksharesd
 
-Synchronizing BlackCoin and a share
+Synchronizing BlackCoin with a share
 ===========================
 
 - Start a BlackCoin client with -rpcallowip=127.0.0.1 -server=1 and the blackshares client
@@ -46,10 +46,6 @@ The patch will be accepted if there is broad consensus that it is a
 good thing.  Developers should expect to rework and resubmit patches
 if they don't match the project's coding conventions (see coding.txt)
 or are controversial.
-
-The master branch is regularly built and tested, but is not guaranteed
-to be completely stable. Tags are regularly created to indicate new
-stable release versions of BlackCoin.
 
 Feature branches are created when there are major new features being
 worked on by several people.
