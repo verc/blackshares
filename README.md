@@ -36,6 +36,7 @@ Distributing dividents among stakeholders
 - Show the distribution of X BlackCoin over all stake holders that have a nonzero balance since time T (unix time):
  
   ./blacksharesd distribute T X
+
 - Send coins according to distribution:
 - 
   ./blacksharesd distribute T X true
