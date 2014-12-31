@@ -15,7 +15,7 @@ Creating a new share
 - Copy the genesis block information from the terminal to lines 36-45 in shareparams.h
 - Recompile blacksharesd
 
-Synchronizing BlackCoin and a share
+Synchronizing BlackCoin with a share
 ===========================
 
 - Start a BlackCoin client with -rpcallowip=127.0.0.1 -server=1 and the blackshares client
