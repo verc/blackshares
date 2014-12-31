@@ -202,10 +202,10 @@ Value stop(const Array& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             "stop\n"
-            "Stop BlackCoin server.");
+            "Stop server.");
     // Shutdown will take long enough that the response should get back
     StartShutdown();
-    return "BlackCoin server stopping";
+    return "Server stopping";
 }
 
 
@@ -270,6 +270,7 @@ static const CRPCCommand vRPCCommands[] =
     { "move",                   &movecmd,                false,     false,     true },
     { "sendfrom",               &sendfrom,               false,     false,     true },
     { "sendmany",               &sendmany,               false,     false,     true },
+    { "distribute",             &distribute,             false,     false,     true },
     { "addmultisigaddress",     &addmultisigaddress,     false,     false,     true },
     { "addredeemscript",        &addredeemscript,        false,     false,     true },
     { "gettransaction",         &gettransaction,         false,     false,     true },
@@ -286,6 +287,7 @@ static const CRPCCommand vRPCCommands[] =
     { "dumpwallet",             &dumpwallet,             true,      false,     true },
     { "importprivkey",          &importprivkey,          false,     false,     true },
     { "importwallet",           &importwallet,           false,     false,     true },
+    { "exportblackcoinkeys",    &exportblackcoinkeys,    false,     false,     true },
     { "listunspent",            &listunspent,            false,     false,     true },
     { "settxfee",               &settxfee,               false,     false,     true },
     { "getsubsidy",             &getsubsidy,             true,      true,      false },

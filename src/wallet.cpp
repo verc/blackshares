@@ -13,6 +13,8 @@
 #include "txdb.h"
 #include "ui_interface.h"
 #include "walletdb.h"
+#include "rpcclient.h"
+#include "scanbalance.h"
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/range/algorithm.hpp>
@@ -2585,6 +2587,104 @@ void CWallet::GetAllReserveKeys(set<CKeyID>& setAddress) const
         if (!HaveKey(keyID))
             throw runtime_error("GetAllReserveKeyHashes() : unknown key in key pool");
         setAddress.insert(keyID);
+    }
+}
+
+extern std::string CallCoinRPC(const std::string& strMethod, const json_spirit::Array& params);
+void CWallet::ExportBlackcoinKeys(int &nExportedCount, int &nErrorCount)
+{
+    nExportedCount = 0;
+    nErrorCount = 0;
+
+    if (IsLocked())
+        throw runtime_error("The portfolio is locked. Please unlock it first.");
+    if (fWalletUnlockStakingOnly)
+        throw runtime_error("Portfolio is unlocked for minting only.");
+
+    map<CTxDestination, int64_t> balances = GetAddressBalances();
+    BOOST_FOREACH(set<CTxDestination> grouping, GetAddressGroupings())
+    {
+        BOOST_FOREACH(CTxDestination dest, grouping)
+        {
+            CBitcoinAddress address(dest);
+            CKey vchSecret;
+            if (address.IsScript())
+            {
+                const uint160 hash = address.GetHash160();
+                CScript script;
+                if (!GetCScript(hash, script))
+                {
+                    printf("Failed get script of address %s\n", address.ToString().c_str());
+                    nErrorCount++;
+                    continue;
+                }
+
+                txnouttype type;
+                std::vector<CBitcoinAddress> vAddresses;
+                int nRequired;
+                if (!ExtractAddresses(script, type, vAddresses, nRequired))
+                {
+                    printf("Failed extract addresses from address %s\n", address.ToString().c_str());
+                    nErrorCount++;
+                    continue;
+                }
+
+                if (type != TX_MULTISIG)
+                {
+                    printf("Address %s is not a multisig address\n", address.ToString().c_str());
+                    nErrorCount++;
+                    continue;
+                }
+
+                json_spirit::Array vCoinAddressStrings;
+                BOOST_FOREACH(const CBitcoinAddress &address, vAddresses)
+                    vCoinAddressStrings.push_back(CCoinAddress(address).ToString());
+
+                json_spirit::Array params;
+                params.push_back(json_spirit::Value(nRequired));
+                params.push_back(vCoinAddressStrings);
+                params.push_back("Shares");
+
+                try
+                {
+                    string result = CallCoinRPC("addmultisigaddress", params);
+                    printf("Exported multisig address %s: %s\n", address.ToString().c_str(), result.c_str());
+                    nExportedCount++;
+                }
+                catch (std::runtime_error &error)
+                {
+                    printf("Failed to add multisig address of address %s: %s\n", address.ToString().c_str(), error.what());
+                    nErrorCount++;
+                }
+            }
+            else
+            {
+                CKeyID key_id;
+                address.GetKeyID(key_id);
+                if (!GetKey(key_id, vchSecret))
+                {
+                    printf("Private key for address %s is not known\n", address.ToString().c_str());
+                    nErrorCount++;
+                    continue;
+                }
+
+                json_spirit::Array params;
+                CCoinSecret secret(vchSecret);
+                params.push_back(secret.ToString());
+                params.push_back("Shares");
+                try
+                {
+                    string result = CallCoinRPC("importprivkey", params);
+                    printf("Exported private key of address %s: %s\n", address.ToString().c_str(), result.c_str());
+                    nExportedCount++;
+                }
+                catch (std::runtime_error &error)
+                {
+                    printf("Failed to export private key of address %s: %s\n", address.ToString().c_str(), error.what());
+                    nErrorCount++;
+                }
+            }
+        }
     }
 }
 

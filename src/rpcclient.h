@@ -11,7 +11,7 @@
 #include "json/json_spirit_writer_template.h"
 
 int CommandLineRPC(int argc, char *argv[]);
+std::string CallCoinRPC(const std::string& strMethod, const json_spirit::Array& params);
 
 json_spirit::Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams);
-
 #endif

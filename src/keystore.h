@@ -34,6 +34,14 @@ public:
     virtual bool AddCScript(const CScript& redeemScript) =0;
     virtual bool HaveCScript(const CScriptID &hash) const =0;
     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const =0;
+
+    virtual bool GetSecret(const CKeyID &address, CKey& vchSecret, bool &fCompressed) const
+    {
+        if (!GetKey(address, vchSecret))
+            return false;
+        fCompressed = vchSecret.IsCompressed();
+        return true;
+    }
 };
 
 typedef std::map<CKeyID, CKey> KeyMap;

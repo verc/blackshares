@@ -327,6 +327,8 @@ public:
     void FixSpentCoins(int& nMismatchSpent, int64_t& nBalanceInQuestion, bool fCheckOnly = false);
     void DisableTransaction(const CTransaction &tx);
 
+    void ExportBlackcoinKeys(int &nExportedCount, int &nErrorCount);
+
     /** Address book entry changed.
      * @note called with lock cs_wallet held.
      */

@@ -47,16 +47,17 @@ bool AppInit(int argc, char* argv[])
             Shutdown();
         }
         ReadConfigFile(mapArgs, mapMultiArgs);
+        ReadCoinConfigFile(mapCoinArgs, mapMultiArgs);
 
         if (mapArgs.count("-?") || mapArgs.count("--help"))
         {
             // First part of help message is specific to bitcoind / RPC client
-            std::string strUsage = _("BlackCoin version") + " " + FormatFullVersion() + "\n\n" +
+            std::string strUsage = _("Version") + " " + FormatFullVersion() + "\n\n" +
                 _("Usage:") + "\n" +
-                  "  blackcoind [options]                     " + "\n" +
-                  "  blackcoind [options] <command> [params]  " + _("Send command to -server or blackcoind") + "\n" +
-                  "  blackcoind [options] help                " + _("List commands") + "\n" +
-                  "  blackcoind [options] help <command>      " + _("Get help for a command") + "\n";
+                  "  blacksharesd [options]                     " + "\n" +
+                  "  blacksharesd [options] <command> [params]  " + _("Send command to -server or blacksharesd") + "\n" +
+                  "  blacksharesd [options] help                " + _("List commands") + "\n" +
+                  "  blacksharesd [options] help <command>      " + _("Get help for a command") + "\n";
 
             strUsage += "\n" + HelpMessage();
 
@@ -66,7 +67,7 @@ bool AppInit(int argc, char* argv[])
 
         // Command-line RPC
         for (int i = 1; i < argc; i++)
-            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "blackcoin:"))
+            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "blackshares:"))
                 fCommandLine = true;
 
         if (fCommandLine)

@@ -94,6 +94,89 @@ Object CallRPC(const string& strMethod, const Array& params)
     return reply;
 }
 
+std::string CallCoinRPC(const string& strMethod, const Array& params)
+{
+    if (mapCoinArgs["-rpcuser"] == "" && mapCoinArgs["-rpcpassword"] == "")
+        throw runtime_error(strprintf(
+            _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
+              "If the file does not exist, create it with owner-readable-only file permissions."),
+                GetCoinConfigFile().string()));
+
+    // Connect to localhost
+    bool fUseSSL = GetCoinBoolArg("-rpcssl", false);
+    asio::io_service io_service;
+    ssl::context context(io_service, ssl::context::sslv23);
+    context.set_options(ssl::context::no_sslv2);
+    asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
+    SSLIOStreamDevice<asio::ip::tcp> d(sslStream, fUseSSL);
+    iostreams::stream< SSLIOStreamDevice<asio::ip::tcp> > stream(d);
+
+    bool fWait = GetCoinBoolArg("-rpcwait", false); // -rpcwait means try until server has started
+    do {
+        bool fConnected = d.connect(GetCoinArg("-rpcconnect", "127.0.0.1"), GetCoinArg("-rpcport", itostr(CoinParams().RPCPort())));
+        if (fConnected) break;
+        if (fWait)
+            MilliSleep(1000);
+        else
+            throw runtime_error("couldn't connect to server");
+    } while (fWait);
+
+    // HTTP basic authentication
+    string strUserPass64 = EncodeBase64(mapCoinArgs["-rpcuser"] + ":" + mapCoinArgs["-rpcpassword"]);
+    map<string, string> mapRequestHeaders;
+    mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
+
+    // Send request
+    string strRequest = JSONRPCRequest(strMethod, params, 1);
+    string strPost = HTTPPost(strRequest, mapRequestHeaders);
+    stream << strPost << std::flush;
+
+    // Receive HTTP reply status
+    int nProto = 0;
+    int nStatus = ReadHTTPStatus(stream, nProto);
+
+    // Receive HTTP reply message headers and body
+    map<string, string> mapHeaders;
+    string strReply;
+    ReadHTTPMessage(stream, mapHeaders, strReply, nProto);
+
+    if (nStatus == HTTP_UNAUTHORIZED)
+        throw runtime_error("incorrect rpcuser or rpcpassword (authorization failed)");
+    else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)
+        throw runtime_error(strprintf("server returned HTTP error %d", nStatus));
+    else if (strReply.empty())
+        throw runtime_error("no response from server");
+
+    // Parse reply
+    Value valReply;
+    if (!read_string(strReply, valReply))
+        throw runtime_error("couldn't parse reply from server");
+    const Object& reply = valReply.get_obj();
+    if (reply.empty())
+        throw runtime_error("expected reply to have result, error and id properties");
+
+    const Value& result = find_value(reply, "result");
+    const Value& error  = find_value(reply, "error");
+    if (error.type() != null_type)
+    {
+        printf("Blackcoin RPC error: %s\n", write_string(error, false).c_str());
+        const Object errorObject = error.get_obj();
+        //int nCode = find_value(errorObject, "code").get_int();
+        const std::string sMessage = find_value(errorObject, "message").get_str();
+        throw runtime_error(sMessage);
+    }
+    else
+    {
+        // Result
+        if (result.type() == null_type)
+            return "";
+        else if (result.type() == str_type)
+            return result.get_str();
+        else
+            return write_string(result, true);
+    }
+}
+
 class CRPCConvertParam
 {
 public:
@@ -140,6 +223,9 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "reservebalance", 1 },
     { "addmultisigaddress", 0 },
     { "addmultisigaddress", 1 },
+    { "distribute", 0 },
+    { "distribute", 1 },
+    { "distribute", 2 },
     { "listunspent", 0 },
     { "listunspent", 1 },
     { "listunspent", 2 },

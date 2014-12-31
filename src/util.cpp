@@ -67,6 +67,7 @@ namespace boost {
 using namespace std;
 
 map<string, string> mapArgs;
+map<string, string> mapCoinArgs;
 map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
 bool fPrintToConsole = false;
@@ -513,10 +514,24 @@ std::string GetArg(const std::string& strArg, const std::string& strDefault)
     return strDefault;
 }
 
+std::string GetCoinArg(const std::string& strArg, const std::string& strDefault)
+{
+    if (mapCoinArgs.count(strArg))
+        return mapCoinArgs[strArg];
+    return strDefault;
+}
+
 int64_t GetArg(const std::string& strArg, int64_t nDefault)
 {
     if (mapArgs.count(strArg))
         return atoi64(mapArgs[strArg]);
+    return nDefault;
+}
+
+int64_t GetCoinArg(const std::string& strArg, int64_t nDefault)
+{
+    if (mapCoinArgs.count(strArg))
+        return atoi64(mapCoinArgs[strArg]);
     return nDefault;
 }
 
@@ -527,6 +542,17 @@ bool GetBoolArg(const std::string& strArg, bool fDefault)
         if (mapArgs[strArg].empty())
             return true;
         return (atoi(mapArgs[strArg]) != 0);
+    }
+    return fDefault;
+}
+
+bool GetCoinBoolArg(const std::string& strArg, bool fDefault)
+{
+    if (mapCoinArgs.count(strArg))
+    {
+        if (mapCoinArgs[strArg].empty())
+            return true;
+        return (atoi(mapCoinArgs[strArg]) != 0);
     }
     return fDefault;
 }
@@ -905,13 +931,6 @@ bool WildcardMatch(const string& str, const string& mask)
     return WildcardMatch(str.c_str(), mask.c_str());
 }
 
-
-
-
-
-
-
-
 static std::string FormatException(std::exception* pex, const char* pszThread)
 {
 #ifdef WIN32
@@ -946,6 +965,35 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
 }
 
 boost::filesystem::path GetDefaultDataDir()
+{
+    namespace fs = boost::filesystem;
+    // Windows < Vista: C:\Documents and Settings\Username\Application Data\BlackCoin
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\BlackCoin
+    // Mac: ~/Library/Application Support/BlackCoin
+    // Unix: ~/.blackcoin
+#ifdef WIN32
+    // Windows
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "BlackShares";
+#else
+    fs::path pathRet;
+    char* pszHome = getenv("HOME");
+    if (pszHome == NULL || strlen(pszHome) == 0)
+        pathRet = fs::path("/");
+    else
+        pathRet = fs::path(pszHome);
+#ifdef MAC_OSX
+    // Mac
+    pathRet /= "Library/Application Support";
+    fs::create_directory(pathRet);
+    return pathRet / "BlackShares";
+#else
+    // Unix
+    return pathRet / ".blackshares";
+#endif
+#endif
+}
+
+boost::filesystem::path GetDefaultCoinDataDir()
 {
     namespace fs = boost::filesystem;
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\BlackCoin
@@ -1010,6 +1058,40 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     return path;
 }
 
+const boost::filesystem::path &GetCoinDataDir(bool fNetSpecific)
+{
+    namespace fs = boost::filesystem;
+
+    LOCK(csPathCached);
+
+    int nNet = CChainParams::MAX_NETWORK_TYPES;
+    if (fNetSpecific) nNet = CoinParams().NetworkID();
+
+    fs::path &path = pathCached[nNet];
+
+    // This can be called during exceptions by LogPrintf(), so we cache the
+    // value so we don't have to do memory allocations after that.
+    if (!path.empty())
+        return path;
+
+    if (mapCoinArgs.count("-datadir")) {
+        path = fs::system_complete(mapCoinArgs["-datadir"]);
+        if (!fs::is_directory(path)) {
+            path = "";
+            return path;
+        }
+    } else {
+        path = GetDefaultCoinDataDir();
+    }
+    if (fNetSpecific)
+        path /= CoinParams().DataDir();
+
+    fs::create_directory(path);
+
+    return path;
+}
+
+
 void ClearDatadirCache()
 {
     std::fill(&pathCached[0], &pathCached[CChainParams::MAX_NETWORK_TYPES+1],
@@ -1018,8 +1100,15 @@ void ClearDatadirCache()
 
 boost::filesystem::path GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-conf", "blackcoin.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-conf", "blackshares.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
+    return pathConfigFile;
+}
+
+boost::filesystem::path GetCoinConfigFile()
+{
+    boost::filesystem::path pathConfigFile(GetArg("-conf", "blackcoin.conf"));
+    if (!pathConfigFile.is_complete()) pathConfigFile = GetCoinDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
 
@@ -1027,6 +1116,32 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
                     map<string, vector<string> >& mapMultiSettingsRet)
 {
     boost::filesystem::ifstream streamConfig(GetConfigFile());
+    if (!streamConfig.good())
+        return; // No bitcoin.conf file is OK
+
+    set<string> setOptions;
+    setOptions.insert("*");
+
+    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
+    {
+        // Don't overwrite existing settings so command line settings override bitcoin.conf
+        string strKey = string("-") + it->string_key;
+        if (mapSettingsRet.count(strKey) == 0)
+        {
+            mapSettingsRet[strKey] = it->value[0];
+            // interpret nofoo=1 as foo=0 (and nofoo=0 as foo=1) as long as foo not set)
+            InterpretNegativeSetting(strKey, mapSettingsRet);
+        }
+        mapMultiSettingsRet[strKey].push_back(it->value[0]);
+    }
+    // If datadir is changed in .conf file:
+    ClearDatadirCache();
+}
+
+void ReadCoinConfigFile(map<string, string>& mapSettingsRet,
+                    map<string, vector<string> >& mapMultiSettingsRet)
+{
+    boost::filesystem::ifstream streamConfig(GetCoinConfigFile());
     if (!streamConfig.good())
         return; // No bitcoin.conf file is OK
 

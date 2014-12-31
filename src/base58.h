@@ -269,6 +269,18 @@ public:
     bool operator()(const CNoDestination &no) const;
 };
 
+class CCoinAddress;
+class CCoinAddressVisitor : public boost::static_visitor<bool>
+{
+private:
+    CCoinAddress *addr;
+public:
+    CCoinAddressVisitor(CCoinAddress *addrIn) : addr(addrIn) { }
+    bool operator()(const CKeyID &id) const;
+    bool operator()(const CScriptID &id) const;
+    bool operator()(const CNoDestination &no) const;
+};
+
 class CBitcoinAddress : public CBase58Data
 {
 public:
@@ -339,11 +351,138 @@ public:
     bool IsScript() const {
         return IsValid() && vchVersion == Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
     }
+
+    bool SetHash160(const uint160& hash160)
+    {
+        SetData(Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS), &hash160, 20);
+        return true;
+    }
+
+    bool SetScriptHash160(const uint160& hash160)
+    {
+        SetData(Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &hash160, 20);
+        return true;
+    }
+
+    void SetPubKey(const std::vector<unsigned char>& vchPubKey)
+    {
+        SetHash160(Hash160(vchPubKey));
+    }
+
+    uint160 GetHash160() const
+    {
+        assert(vchData.size() == 20);
+        uint160 hash160;
+        memcpy(&hash160, &vchData[0], 20);
+        return hash160;
+    }
+};
+
+class CCoinAddress : public CBitcoinAddress
+{
+public:
+    bool Set(const CKeyID &id) {
+        SetData(CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS), &id, 20);
+        return true;
+    }
+
+    bool Set(const CScriptID &id) {
+        SetData(CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &id, 20);
+        return true;
+    }
+
+    bool Set(const CTxDestination &dest)
+    {
+        return boost::apply_visitor(CCoinAddressVisitor(this), dest);
+    }
+
+    bool IsValid() const
+    {
+        bool fCorrectSize = vchData.size() == 20;
+        bool fKnownVersion = vchVersion == CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS) ||
+                             vchVersion == CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
+        return fCorrectSize && fKnownVersion;
+    }
+
+    CCoinAddress()
+    {
+    }
+
+    CCoinAddress(const CTxDestination &dest)
+    {
+        Set(dest);
+    }
+
+    CCoinAddress(const std::string& strAddress)
+    {
+        SetString(strAddress);
+    }
+
+    CCoinAddress(const char* pszAddress)
+    {
+        SetString(pszAddress);
+    }
+
+    CCoinAddress(uint160 hash160In)
+    {
+        SetHash160(hash160In);
+    }
+
+    CCoinAddress(const CBitcoinAddress &address)
+    {
+        if (address.IsScript())
+            SetScriptHash160(address.GetHash160());
+        else
+            SetHash160(address.GetHash160());
+    }
+
+    CTxDestination Get() const {
+        if (!IsValid())
+            return CNoDestination();
+        uint160 id;
+        memcpy(&id, &vchData[0], 20);
+        if (vchVersion == CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS))
+            return CKeyID(id);
+        else if (vchVersion == CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS))
+            return CScriptID(id);
+        else
+            return CNoDestination();
+    }
+
+    bool GetKeyID(CKeyID &keyID) const {
+        if (!IsValid() || vchVersion != CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS))
+            return false;
+        uint160 id;
+        memcpy(&id, &vchData[0], 20);
+        keyID = CKeyID(id);
+        return true;
+    }
+
+    bool IsScript() const {
+        return IsValid() && vchVersion == CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
+    }
+
+    bool SetHash160(const uint160& hash160)
+    {
+        SetData(CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS), &hash160, 20);
+        return true;
+    }
+
+    bool SetScriptHash160(const uint160& hash160)
+    {
+        SetData(CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &hash160, 20);
+        return true;
+    }
+
 };
 
 bool inline CBitcoinAddressVisitor::operator()(const CKeyID &id) const         { return addr->Set(id); }
 bool inline CBitcoinAddressVisitor::operator()(const CScriptID &id) const      { return addr->Set(id); }
 bool inline CBitcoinAddressVisitor::operator()(const CNoDestination &id) const { return false; }
+
+bool inline CCoinAddressVisitor::operator()(const CKeyID &id) const         { return addr->Set(id); }
+bool inline CCoinAddressVisitor::operator()(const CScriptID &id) const      { return addr->Set(id); }
+bool inline CCoinAddressVisitor::operator()(const CNoDestination &id) const { return false; }
 
 /** A base58-encoded secret key */
 class CBitcoinSecret : public CBase58Data
@@ -362,6 +501,23 @@ public:
         CKey ret;
         ret.Set(&vchData[0], &vchData[32], vchData.size() > 32 && vchData[32] == 1);
         return ret;
+    }
+
+    void SetSecret(const CKey& vchSecret, bool fCompressed)
+    {
+        assert(vchSecret.size() == 32);
+        SetData(Params().Base58Prefix(CChainParams::SECRET_KEY), vchSecret.begin(), 32);
+        if (fCompressed)
+            vchData.push_back(1);
+    }
+
+    CPrivKey GetSecret(bool &fCompressedOut)
+    {
+        CPrivKey vchSecret;
+        vchSecret.resize(32);
+        memcpy(&vchSecret[0], &vchData[0], 32);
+        fCompressedOut = vchData.size() == 33;
+        return vchSecret;
     }
 
     bool IsValid() const
@@ -387,6 +543,35 @@ public:
     }
 
     CBitcoinSecret()
+    {
+    }
+};
+
+/** A base58-encoded secret key */
+class CCoinSecret : public CBitcoinSecret
+{
+public:
+    void SetKey(const CKey& vchSecret)
+    {
+        assert(vchSecret.IsValid());
+        SetData(CoinParams().Base58Prefix(CChainParams::SECRET_KEY), vchSecret.begin(), vchSecret.size());
+        if (vchSecret.IsCompressed())
+            vchData.push_back(1);
+    }
+
+    bool IsValid() const
+    {
+        bool fExpectedFormat = vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1);
+        bool fCorrectVersion = vchVersion == CoinParams().Base58Prefix(CChainParams::SECRET_KEY);
+        return fExpectedFormat && fCorrectVersion;
+    }
+
+    CCoinSecret(const CKey& vchSecret)
+    {
+        SetKey(vchSecret);
+    }
+
+    CCoinSecret()
     {
     }
 };

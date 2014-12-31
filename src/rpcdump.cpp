@@ -107,7 +107,7 @@ Value importprivkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 3)
         throw runtime_error(
-            "importprivkey <blackcoinprivkey> [label] [rescan=true]\n"
+            "importprivkey <shareprivkey> [label] [rescan=true]\n"
             "Adds a private key (as returned by dumpprivkey) to your wallet.");
 
     string strSecret = params[0].get_str();
@@ -245,15 +245,15 @@ Value dumpprivkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "dumpprivkey <blackcoinaddress>\n"
-            "Reveals the private key corresponding to <blackcoinaddress>.");
+            "dumpprivkey <shareaddress>\n"
+            "Reveals the private key corresponding to <shareaddress>.");
 
     EnsureWalletIsUnlocked();
 
     string strAddress = params[0].get_str();
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid BlackCoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid share address");
     if (fWalletUnlockStakingOnly)
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Wallet is unlocked for staking only.");
     CKeyID keyID;
@@ -321,4 +321,24 @@ Value dumpwallet(const Array& params, bool fHelp)
     file << "# End of dump\n";
     file.close();
     return Value::null;
+}
+
+Value exportblackcoinkeys(const json_spirit::Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "exportblackcoinkeys\n"
+            "Add the BlackCoin keys associated with the Blackshares addresses to the BlackCoin wallet. BlackCoin must be running and accept RPC commands.");
+
+    if (pwalletMain->IsLocked())
+        throw JSONRPCError(-13, "Error: Please enter the wallet passphrase with walletpassphrase first.");
+    if (fWalletUnlockStakingOnly)
+        throw JSONRPCError(-102, "Wallet is unlocked for minting only.");
+
+    Object ret;
+    int nExportedCount, nErrorCount;
+    pwalletMain->ExportBlackcoinKeys(nExportedCount, nErrorCount);
+    ret.push_back(Pair("exported", nExportedCount));
+    ret.push_back(Pair("failed", nErrorCount));
+    return ret;
 }

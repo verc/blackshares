@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = blackcoin-qt
+TARGET = blackshares-qt
 VERSION = 1.1.2.1
 INCLUDEPATH += src src/json src/qt
 QT += network
@@ -226,7 +226,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/netbase.h \
     src/clientversion.h \
     src/threadsafety.h \
-    src/tinyformat.h
+    src/tinyformat.h \
+    src/distribution.h \
+    src/scanbalance.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactiontablemodel.cpp \
@@ -303,7 +305,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt-x86.S \
     src/scrypt-x86_64.S \
     src/scrypt.cpp \
-    src/pbkdf2.cpp
+    src/pbkdf2.cpp \
+    src/distribution.cpp \
+    src/scanbalance.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc
