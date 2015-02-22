@@ -47,7 +47,14 @@ bool AppInit(int argc, char* argv[])
             Shutdown();
         }
         ReadConfigFile(mapArgs, mapMultiArgs);
-        ReadCoinConfigFile(mapCoinArgs, mapMultiArgs);
+        
+        string strCoinConfigFile = GetArg("-coinconfig", "");
+        if (!boost::filesystem::exists(strCoinConfigFile))
+        {
+            fprintf(stderr, "Error: Coin config file does not exist: %s\n", strCoinConfigFile.c_str());
+            Shutdown();
+        }
+        ReadCoinConfigFile(strCoinConfigFile, mapCoinArgs, mapMultiArgs);
 
         if (mapArgs.count("-?") || mapArgs.count("--help"))
         {

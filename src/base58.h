@@ -25,6 +25,9 @@
 #include "allocators.h"
 #include "util.h"
 
+#include <boost/assign/list_of.hpp>
+using namespace boost::assign;
+
 static const char* pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 // Encode a byte sequence as a base58-encoded string
@@ -382,12 +385,12 @@ class CCoinAddress : public CBitcoinAddress
 {
 public:
     bool Set(const CKeyID &id) {
-        SetData(CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS), &id, 20);
+        SetData(vPubKeyAddress, &id, 20);
         return true;
     }
 
     bool Set(const CScriptID &id) {
-        SetData(CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &id, 20);
+        SetData(vScriptAddress, &id, 20);
         return true;
     }
 
@@ -399,15 +402,25 @@ public:
     bool IsValid() const
     {
         bool fCorrectSize = vchData.size() == 20;
-        bool fKnownVersion = vchVersion == CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS) ||
-                             vchVersion == CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
+        bool fKnownVersion = vchVersion == vPubKeyAddress ||
+                             vchVersion == vScriptAddress;
         return fCorrectSize && fKnownVersion;
     }
 
-    CCoinAddress()
+    CCoinAddress(unsigned char pubKeyAddress, unsigned char scriptAddress)
     {
+        vPubKeyAddress = list_of(pubKeyAddress);
+        vScriptAddress = list_of(scriptAddress);
     }
 
+    CCoinAddress(const std::string& pszAddress, unsigned char pubKeyAddress, unsigned char scriptAddress)
+    {
+        vPubKeyAddress = list_of(pubKeyAddress);
+        vScriptAddress = list_of(scriptAddress);
+        SetString(pszAddress);
+    }
+
+    /*
     CCoinAddress(const CTxDestination &dest)
     {
         Set(dest);
@@ -427,9 +440,13 @@ public:
     {
         SetHash160(hash160In);
     }
+    */
 
-    CCoinAddress(const CBitcoinAddress &address)
+    CCoinAddress(const CBitcoinAddress &address, unsigned char pubKeyAddress, unsigned char scriptAddress)
     {
+        vPubKeyAddress = list_of(pubKeyAddress);
+        vScriptAddress = list_of(scriptAddress);
+
         if (address.IsScript())
             SetScriptHash160(address.GetHash160());
         else
@@ -441,16 +458,16 @@ public:
             return CNoDestination();
         uint160 id;
         memcpy(&id, &vchData[0], 20);
-        if (vchVersion == CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS))
+        if (vchVersion == vPubKeyAddress)
             return CKeyID(id);
-        else if (vchVersion == CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS))
+        else if (vchVersion == vScriptAddress)
             return CScriptID(id);
         else
             return CNoDestination();
     }
 
     bool GetKeyID(CKeyID &keyID) const {
-        if (!IsValid() || vchVersion != CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS))
+        if (!IsValid() || vchVersion != vPubKeyAddress)
             return false;
         uint160 id;
         memcpy(&id, &vchData[0], 20);
@@ -459,21 +476,23 @@ public:
     }
 
     bool IsScript() const {
-        return IsValid() && vchVersion == CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
+        return IsValid() && vchVersion == vScriptAddress;
     }
 
     bool SetHash160(const uint160& hash160)
     {
-        SetData(CoinParams().Base58Prefix(CChainParams::PUBKEY_ADDRESS), &hash160, 20);
+        SetData(vPubKeyAddress, &hash160, 20);
         return true;
     }
 
     bool SetScriptHash160(const uint160& hash160)
     {
-        SetData(CoinParams().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &hash160, 20);
+        SetData(vScriptAddress, &hash160, 20);
         return true;
     }
 
+    private:
+        std::vector<unsigned char> vPubKeyAddress, vScriptAddress;
 };
 
 bool inline CBitcoinAddressVisitor::operator()(const CKeyID &id) const         { return addr->Set(id); }
@@ -554,7 +573,7 @@ public:
     void SetKey(const CKey& vchSecret)
     {
         assert(vchSecret.IsValid());
-        SetData(CoinParams().Base58Prefix(CChainParams::SECRET_KEY), vchSecret.begin(), vchSecret.size());
+        SetData(vSecretKey, vchSecret.begin(), vchSecret.size());
         if (vchSecret.IsCompressed())
             vchData.push_back(1);
     }
@@ -562,18 +581,21 @@ public:
     bool IsValid() const
     {
         bool fExpectedFormat = vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1);
-        bool fCorrectVersion = vchVersion == CoinParams().Base58Prefix(CChainParams::SECRET_KEY);
+        bool fCorrectVersion = vchVersion == vSecretKey;
         return fExpectedFormat && fCorrectVersion;
     }
 
-    CCoinSecret(const CKey& vchSecret)
+    CCoinSecret(const CKey& vchSecret, unsigned char secretKey)
     {
+        vSecretKey = list_of(secretKey);
         SetKey(vchSecret);
     }
 
     CCoinSecret()
     {
     }
+private:
+    std::vector<unsigned char> vSecretKey;
 };
 
 

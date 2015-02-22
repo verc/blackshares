@@ -100,7 +100,13 @@ std::string CallCoinRPC(const string& strMethod, const Array& params)
         throw runtime_error(strprintf(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
               "If the file does not exist, create it with owner-readable-only file permissions."),
-                GetCoinConfigFile().string()));
+                GetArg("-coinconfig", "")));
+
+    if (mapCoinArgs["-rpcport"] == "")
+        throw runtime_error(strprintf(
+            _("You must set rpcport=<port> in the configuration file:\n%s\n"
+              "If the file does not exist, create it with owner-readable-only file permissions."),
+                GetArg("-coinconfig", "")));
 
     // Connect to localhost
     bool fUseSSL = GetCoinBoolArg("-rpcssl", false);
@@ -113,7 +119,7 @@ std::string CallCoinRPC(const string& strMethod, const Array& params)
 
     bool fWait = GetCoinBoolArg("-rpcwait", false); // -rpcwait means try until server has started
     do {
-        bool fConnected = d.connect(GetCoinArg("-rpcconnect", "127.0.0.1"), GetCoinArg("-rpcport", itostr(CoinParams().RPCPort())));
+        bool fConnected = d.connect(GetCoinArg("-rpcconnect", "127.0.0.1"), mapCoinArgs["-rpcport"]);
         if (fConnected) break;
         if (fWait)
             MilliSleep(1000);

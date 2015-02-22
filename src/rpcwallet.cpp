@@ -303,6 +303,18 @@ Value listaddressgroupings(const Array& params, bool fHelp)
             "made public by common use as inputs or as the resulting change\n"
             "in past transactions");
 
+    if (mapCoinArgs["-base58pubkeyaddress"] == "")
+        throw runtime_error(strprintf(
+            _("You must set base58pubkeyaddress=<base85 public key address prefix> in the configuration file:\n%s\n."),
+                GetArg("-coinconfig", "")));
+    unsigned char pubKeyAddress = (unsigned char) GetCoinArg("-base58pubkeyaddress", 0);
+
+    if (mapCoinArgs["-base58scriptkey"] == "")
+        throw runtime_error(strprintf(
+            _("You must set base58scriptaddress=<base85 script address prefix> in the configuration file:\n%s\n."),
+                GetArg("-coinconfig", "")));
+    unsigned char scriptAddress = (unsigned char) GetCoinArg("-base58scriptkey", 0);
+
     Array jsonGroupings;
     map<CTxDestination, int64_t> balances = pwalletMain->GetAddressBalances();
     BOOST_FOREACH(set<CTxDestination> grouping, pwalletMain->GetAddressGroupings())
@@ -312,7 +324,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
         {
             Array addressInfo;
             addressInfo.push_back(CBitcoinAddress(address).ToString());
-            addressInfo.push_back(CCoinAddress(address).ToString());
+            addressInfo.push_back(CCoinAddress(address, pubKeyAddress, scriptAddress).ToString());
             addressInfo.push_back(ValueFromAmount(balances[address]));
             {
                 LOCK(pwalletMain->cs_wallet);
@@ -700,10 +712,22 @@ Value distribute(const Array& params, bool fHelp)
     if (fHelp || params.size() < 2 || params.size() > 3)  {
         string msg = "distribute <cutoff timestamp> <amount> [<proceed>]\n"
             "cutoff is date and time at which the share balances should be considered. Format is unix time.\n"
-            "amount is the the number of blackcoins to distribute, in double-precision floating point number.\n"
-            "If proceed is not true the blackcoins are not sent and the details of the distribution are returned.";
+            "amount is the the number of coins to distribute, in double-precision floating point number.\n"
+            "If proceed is not true the coins are not sent and the details of the distribution are returned.";
         throw runtime_error(msg);
     }
+
+    if (mapCoinArgs["-base58pubkeyaddress"] == "")
+        throw runtime_error(strprintf(
+            _("You must set base58pubkeyaddress=<base85 public key address prefix> in the configuration file:\n%s\n."),
+                GetArg("-coinconfig", "")));
+    unsigned char pubKeyAddress = (unsigned char) GetCoinArg("-base58pubkeyaddress", 0);
+
+    if (mapCoinArgs["-base58scriptkey"] == "")
+        throw runtime_error(strprintf(
+            _("You must set base58scriptaddress=<base85 script address prefix> in the configuration file:\n%s\n."),
+                GetArg("-coinconfig", "")));
+    unsigned char scriptAddress = (unsigned char) GetCoinArg("-base58scriptkey", 0);
 
     unsigned int cutoffTime = params[0].get_int();
     bool fProceed = false;
@@ -714,7 +738,7 @@ Value distribute(const Array& params, bool fHelp)
     GetAddressBalances(cutoffTime, mapBalance);
 
     double dAmount = params[1].get_real();
-    DividendDistributor distributor = GenerateDistribution(mapBalance, dAmount);
+    DividendDistributor distributor = GenerateDistribution(mapBalance, dAmount, pubKeyAddress, scriptAddress);
 
     Array results;
     if (fProceed)
@@ -732,7 +756,7 @@ Value distribute(const Array& params, bool fHelp)
             Object obj;
             obj.push_back(Pair("blackshares_address", distribution.GetShareAddress().ToString()));
             obj.push_back(Pair("balance", (double)distribution.GetBalance() / COIN));
-            obj.push_back(Pair("blackcoin_address", distribution.GetCoinAddress().ToString()));
+            obj.push_back(Pair("dividend_address", distribution.GetCoinAddress().ToString()));
             obj.push_back(Pair("dividends", distribution.GetDividendAmount()));
             distributions.push_back(obj);
         }

@@ -323,12 +323,12 @@ Value dumpwallet(const Array& params, bool fHelp)
     return Value::null;
 }
 
-Value exportblackcoinkeys(const json_spirit::Array& params, bool fHelp)
+Value exportdividendkeys(const json_spirit::Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw runtime_error(
-            "exportblackcoinkeys\n"
-            "Add the BlackCoin keys associated with the Blackshares addresses to the BlackCoin wallet. BlackCoin must be running and accept RPC commands.");
+            "exportdividendkeys\n"
+            "Add the private keys associated with the Blackshares addresses to the dividend wallet. This wallet must be running and accept RPC commands.");
 
     if (pwalletMain->IsLocked())
         throw JSONRPCError(-13, "Error: Please enter the wallet passphrase with walletpassphrase first.");
@@ -337,7 +337,7 @@ Value exportblackcoinkeys(const json_spirit::Array& params, bool fHelp)
 
     Object ret;
     int nExportedCount, nErrorCount;
-    pwalletMain->ExportBlackcoinKeys(nExportedCount, nErrorCount);
+    pwalletMain->ExportDividendKeys(nExportedCount, nErrorCount);
     ret.push_back(Pair("exported", nExportedCount));
     ret.push_back(Pair("failed", nErrorCount));
     return ret;

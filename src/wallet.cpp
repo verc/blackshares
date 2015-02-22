@@ -2591,7 +2591,7 @@ void CWallet::GetAllReserveKeys(set<CKeyID>& setAddress) const
 }
 
 extern std::string CallCoinRPC(const std::string& strMethod, const json_spirit::Array& params);
-void CWallet::ExportBlackcoinKeys(int &nExportedCount, int &nErrorCount)
+void CWallet::ExportDividendKeys(int &nExportedCount, int &nErrorCount)
 {
     nExportedCount = 0;
     nErrorCount = 0;
@@ -2600,6 +2600,24 @@ void CWallet::ExportBlackcoinKeys(int &nExportedCount, int &nErrorCount)
         throw runtime_error("The portfolio is locked. Please unlock it first.");
     if (fWalletUnlockStakingOnly)
         throw runtime_error("Portfolio is unlocked for minting only.");
+
+    if (mapCoinArgs["-base58pubkeyaddress"] == "")
+        throw runtime_error(strprintf(
+            _("You must set base58pubkeyaddress=<base85 public key address prefix> in the configuration file:\n%s\n."),
+                GetArg("-coinconfig", "")));
+    unsigned char pubKeyAddress = (unsigned char) GetCoinArg("-base58pubkeyaddress", 0);
+
+    if (mapCoinArgs["-base58scriptkey"] == "")
+        throw runtime_error(strprintf(
+            _("You must set base58scriptaddress=<base85 script address prefix> in the configuration file:\n%s\n."),
+                GetArg("-coinconfig", "")));
+    unsigned char scriptAddress = (unsigned char) GetCoinArg("-base58scriptkey", 0);
+
+    if (mapCoinArgs["-base58secretkey"] == "")
+        throw runtime_error(strprintf(
+            _("You must set base58secretkey=<base85 secret key> in the configuration file:\n%s\n."),
+                GetArg("-coinconfig", "")));
+    unsigned char secretKey = (unsigned char) GetCoinArg("-base58secretkey", 0);
 
     map<CTxDestination, int64_t> balances = GetAddressBalances();
     BOOST_FOREACH(set<CTxDestination> grouping, GetAddressGroupings())
@@ -2638,7 +2656,7 @@ void CWallet::ExportBlackcoinKeys(int &nExportedCount, int &nErrorCount)
 
                 json_spirit::Array vCoinAddressStrings;
                 BOOST_FOREACH(const CBitcoinAddress &address, vAddresses)
-                    vCoinAddressStrings.push_back(CCoinAddress(address).ToString());
+                    vCoinAddressStrings.push_back(CCoinAddress(address, pubKeyAddress, scriptAddress).ToString());
 
                 json_spirit::Array params;
                 params.push_back(json_spirit::Value(nRequired));
@@ -2669,7 +2687,7 @@ void CWallet::ExportBlackcoinKeys(int &nExportedCount, int &nErrorCount)
                 }
 
                 json_spirit::Array params;
-                CCoinSecret secret(vchSecret);
+                CCoinSecret secret(vchSecret, secretKey);
                 params.push_back(secret.ToString());
                 params.push_back("Shares");
                 params.push_back(json_spirit::Value(false));

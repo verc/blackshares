@@ -88,7 +88,6 @@ protected:
  * outside of the unit tests.
  */
 const CChainParams &Params();
-const CChainParams &CoinParams();
 
 /** Sets the params returned by Params() to those for the given network. */
 void SelectParams(CChainParams::Network network);

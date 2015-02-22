@@ -45,7 +45,7 @@ void DividendDistributor::Distribute(double dDistributedAmount, double dMinimumP
                 bMustRedistribute = true;
                 continue;
             }
-            Distribution distribution(it->first, it->second, dDistributed);
+            Distribution distribution(it->first, it->second, dDistributed, pubKeyAddress, scriptAddress);
             vDistribution.push_back(distribution);
 
             dTotalDistributed += dDistributed;
@@ -93,14 +93,15 @@ double GetMinimumDividendPayout()
     return boost::lexical_cast<double>(GetArg("-distributionminpayout", "0.01"));
 }
 
-DividendDistributor GenerateDistribution(const BalanceMap &mapBalance, double dAmount)
+DividendDistributor GenerateDistribution(const BalanceMap &mapBalance, double dAmount, unsigned char pubKeyAddress, unsigned char scriptAddress)
 {
     double dMinPayout = GetMinimumDividendPayout();
 
-    printf("Distributing %f blackcoins to %d addresses with a minimum payout of %f\n", dAmount, (int)mapBalance.size(), dMinPayout);
+    printf("Distributing %f coins to %d addresses with a minimum payout of %f\n", dAmount, (int)mapBalance.size(), dMinPayout);
 
-    try {
-        DividendDistributor distributor(mapBalance);
+    try
+    {
+        DividendDistributor distributor(mapBalance, pubKeyAddress, scriptAddress);
         distributor.Distribute(dAmount, dMinPayout);
         return distributor;
     }
@@ -118,7 +119,7 @@ int GetMaximumDistributionPerTransaction()
     // Each (non compressed) input takes 180 bytes, each output 34, and max 50 extra bytes
     // http://bitcoin.stackexchange.com/a/3011/9199
     // So 1000 outputs leaves room for about 350 inputs
-    // NOTE: Seems also to be true for Blackcoin (TODO)
+    // NOTE: Seems also to be true for coin (TODO)
     return GetArg("-maxdistributionpertransaction", 1000);
 }
 
@@ -130,14 +131,14 @@ Array SendDistribution(const DividendDistributor &distributor)
         double dBalance = GetDistributionBalance();
 
         if (dTotalDistributed > dBalance)
-            throw runtime_error("Not enough blackcoins available in distribution account");
+            throw runtime_error("Not enough coins available in distribution account");
 
         int nMaxDistributionPerTransaction = GetMaximumDistributionPerTransaction();
         printf("Maximum output per transaction: %d\n", nMaxDistributionPerTransaction);
 
         int nTransactions = distributor.GetTransactionCount(nMaxDistributionPerTransaction);
 
-        printf("Will send %f blackcoins to %d addresses in %d transactions\n", dTotalDistributed, nDistributionCount, nTransactions);
+        printf("Will send %f coins to %d addresses in %d transactions\n", dTotalDistributed, nDistributionCount, nTransactions);
 
         vector<Object> vOutputs;
         distributor.GenerateOutputs(nTransactions, vOutputs);

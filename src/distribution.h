@@ -14,8 +14,8 @@ protected:
     double dDividendAmount;
 
 public:
-    Distribution(CBitcoinAddress addrShares, int64_t nBalance, double dDividendAmount)
-        : addrShares(addrShares), nBalance(nBalance), addrCoin(addrShares), dDividendAmount(dDividendAmount)
+    Distribution(CBitcoinAddress addrShares, int64_t nBalance, double dDividendAmount, unsigned char pubKeyAddress, unsigned char scriptAddress)
+        : addrShares(addrShares), nBalance(nBalance), addrCoin(addrShares, pubKeyAddress, scriptAddress), dDividendAmount(dDividendAmount)
     {
     }
 
@@ -48,15 +48,17 @@ class DividendDistributor
 protected:
     BalanceMap mapBalance;
     double dTotalDistributed;
+    unsigned char pubKeyAddress;
+    unsigned char scriptAddress;
 
     DistributionVector vDistribution;
 
 public:
-    DividendDistributor() : mapBalance(), dTotalDistributed(0)
+    DividendDistributor(unsigned char pubKeyAddress, unsigned char scriptAddress) : mapBalance(), dTotalDistributed(0), pubKeyAddress(pubKeyAddress), scriptAddress(scriptAddress)
     {
     }
 
-    DividendDistributor(const BalanceMap& mapBalance) : mapBalance(mapBalance), dTotalDistributed(0)
+    DividendDistributor(const BalanceMap& mapBalance, unsigned char pubKeyAddress, unsigned char scriptAddress) : mapBalance(mapBalance), dTotalDistributed(0), pubKeyAddress(pubKeyAddress), scriptAddress(scriptAddress)
     {
     }
 
@@ -96,7 +98,7 @@ public:
     }
 };
 
-DividendDistributor GenerateDistribution(const BalanceMap &mapBalance, double dAmount);
+DividendDistributor GenerateDistribution(const BalanceMap &mapBalance, double dAmount, unsigned char pubKeyAddress, unsigned char scriptAddress);
 json_spirit::Array SendDistribution(const DividendDistributor &distributor);
 double GetMinimumDividendPayout();
 int GetMaximumDistributionPerTransaction();

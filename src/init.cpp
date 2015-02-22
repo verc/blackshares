@@ -166,6 +166,7 @@ std::string HelpMessage()
     strUsage += "  -conf=<file>           " + _("Specify configuration file (default: blackshares.conf)") + "\n";
     strUsage += "  -pid=<file>            " + _("Specify pid file (default: blackcoind.pid)") + "\n";
     strUsage += "  -datadir=<dir>         " + _("Specify data directory") + "\n";
+    strUsage += "  -coinconfig=<file>     " + _("Specify dividend coin config file") + "\n";
     strUsage += "  -wallet=<dir>          " + _("Specify wallet file (within data directory)") + "\n";
     strUsage += "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n";
     strUsage += "  -dblogsize=<n>         " + _("Set database disk log size in megabytes (default: 100)") + "\n";
